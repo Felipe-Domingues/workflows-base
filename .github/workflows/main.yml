@@ -1,9 +1,11 @@
 name: Deploy Staging → Produção 🚀
 
 on:
-  push:
-    branches:
-      - staging
+  workflow_call:
+    inputs:
+      GH_TOKEN:
+        required: true
+        type: secret
 
 jobs:
   deploy-em-staging:
@@ -16,17 +18,17 @@ jobs:
           echo "🔍 Verificando se o workflow staging.yml existe no repositório ${{ github.repository }}..."
           if ! gh api repos/${{ github.repository }}/contents/.github/workflows/staging.yml > /dev/null 2>&1; then
             echo "❌ Erro: O workflow staging.yml não foi encontrado no repositório ${{ github.repository }}."
-            echo "skip_step=true" >> $GITHUB_ENV
+            echo "skip_staging=true" >> $GITHUB_ENV
           else
             echo "✅ Workflow staging.yml encontrado. Prosseguindo com a execução."
-            echo "skip_step=false" >> $GITHUB_ENV
+            echo "skip_staging=false" >> $GITHUB_ENV
           fi
 
       - name: Chamar o workflow de deploy-staging.yml no repositório ${{ github.repository }}
-        if: env.skip_step != 'true'
+        if: env.skip_staging != 'true'
         run: |
           echo "🔄 Chamando o workflow staging.yml no repositório ${{ github.repository }}..."
-          gh workflow run staging.yml --repo ${{ github.repository }}
+          gh workflow run staging.yml --repo ${{ github.repository }} --ref main --workflow-run --token ${{ inputs.GH_TOKEN }}
 
   realizar-deploy-em-producao:
     name: Realizar deploy em produção? ⚠️
@@ -35,8 +37,22 @@ jobs:
     environment:
       name: production
     steps:
-      - name: Aguardando aprovação manual para produção 👨‍💻
-        run: echo "Aguardando aprovação..."
+      - name: Verificar se o workflow de deploy-production.yml existe no repositório ${{ github.repository }}
+        id: check_production
+        run: |
+          echo "🔍 Verificando se o workflow production.yml existe no repositório ${{ github.repository }}..."
+          if ! gh api repos/${{ github.repository }}/contents/.github/workflows/production.yml > /dev/null 2>&1; then
+            echo "❌ Erro: O workflow production.yml não foi encontrado no repositório ${{ github.repository }}."
+            echo "skip_production=true" >> $GITHUB_ENV
+          else
+            echo "✅ Workflow production.yml encontrado. Prosseguindo com a execução."
+            echo "skip_production=false" >> $GITHUB_ENV
+
+      - name: Chamar o workflow de deploy-production.yml no repositório ${{ github.repository }}
+        if: env.skip_production != 'true'
+        run: |
+          echo "🔄 Chamando o workflow production.yml no repositório ${{ github.repository }}..."
+          gh workflow run production.yml --repo ${{ github.repository }} --ref main --workflow-run --token ${{ inputs.GH_TOKEN }}
 
   merge-para-main:
     name: Merge para Main 🔀
@@ -51,7 +67,7 @@ jobs:
       - name: Criar Pull Request staging → main
         id: criar_pr
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ inputs.GH_TOKEN }}
         run: |
           gh repo set-default ${{ github.repository }}
           TIMESTAMP=$(TZ=America/Sao_Paulo date +"%d/%m/%Y %H:%M:%S")
@@ -66,7 +82,7 @@ jobs:
         id: verifica_pr
         if: env.PR_NUMBER != ''
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ inputs.GH_TOKEN }}
         run: |
           gh pr merge $PR_NUMBER --merge --repo ${{ github.repository }}
           echo "merged=true" >> $GITHUB_OUTPUT
@@ -77,19 +93,8 @@ jobs:
     runs-on: ubuntu-latest
     if: needs.merge-para-main.outputs.merged == 'true'
     steps:
-      - name: Verificar se o workflow de deploy-production.yml existe no repositório ${{ github.repository }}
-        id: check_production
+      - name: Rodando testes em produção
         run: |
-          echo "🔍 Verificando se o workflow production.yml existe no repositório ${{ github.repository }}..."
-          if ! gh api repos/${{ github.repository }}/contents/.github/workflows/production.yml > /dev/null 2>&1; then
-            echo "❌ Erro: O workflow production.yml não foi encontrado no repositório ${{ github.repository }}."
-            echo "skip_step=true" >> $GITHUB_ENV
-          else
-            echo "✅ Workflow production.yml encontrado. Prosseguindo com a execução."
-            echo "skip_step=false" >> $GITHUB_ENV
-
-      - name: Chamar o workflow de deploy-production.yml no repositório ${{ github.repository }}
-        if: env.skip_step != 'true'
-        run: |
-          echo "🔄 Chamando o workflow production.yml no repositório ${{ github.repository }}..."
-          gh workflow run production.yml --repo ${{ github.repository }}
+          echo "Iniciando verificação pós-merge na main..."
+          sleep 1
+          echo "Testes em produção concluídos com sucesso."

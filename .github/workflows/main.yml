@@ -46,13 +46,11 @@ jobs:
     needs: deploy-em-staging
     runs-on: ubuntu-latest
     environment:
-      name: production
+      name: production  # Aqui estamos referenciando o ambiente que tem a aprovação manual configurada
     steps:
       - name: 🛑 Aguardando aprovação manual
-        id: approval
         run: |
           echo "Aguardando aprovação para o deploy em produção..."
-        # Aqui você deve usar o comando de `workflow_dispatch` para aguardar uma aprovação manual.
 
   deploy-em-producao:
     name: 🚢 Deploy em Produção

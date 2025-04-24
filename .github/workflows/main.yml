@@ -11,56 +11,33 @@ on:
         required: true
 
 jobs:
-  deploy-em-staging:
-    name: 📦 Deploy em Staging
-    runs-on: ubuntu-latest
-    steps:
-      - name: 🔍 Verificando se existe workflow de staging em ${{ inputs.repository }}
-        id: verifica_staging
-        env:
-          REPO: ${{ inputs.repository }}
-          TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          echo "Checando workflow de staging remoto em $REPO..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token $TOKEN" \
-            https://api.github.com/repos/$REPO/contents/.github/workflows/staging.yml)
+  chamar-staging:
+    name: 📦 Deploy Staging (${{ inputs.repository }})
+    uses: ${{ inputs.repository }}/.github/workflows/staging.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-          if [ "$STATUS" != "200" ]; then
-            echo "Workflow de staging não encontrado. Pulando esta etapa."
-            echo "found=false" >> $GITHUB_OUTPUT
-          else
-            echo "Workflow encontrado."
-            echo "found=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 🚀 Executando workflow de staging
-        if: steps.verifica_staging.outputs.found == 'true'
-        uses: felipe-domingues/app-staging/.github/workflows/staging.yml@main
-        secrets:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
-  realizar-deploy-em-producao:
-    name: 🧭 Realizar deploy em produção?
-    needs: deploy-em-staging
+  aprovar-produção:
+    name: ✅ Aprovação para Produção
+    needs: chamar-staging
     runs-on: ubuntu-latest
     environment:
       name: production
     steps:
-      - name: 🛑 Aguardando aprovação manual para produção
-        run: echo "Aguardando aprovação..."
+      - name: 🛑 Aguardando aprovação manual
+        run: echo "Aguardando aprovação para produção..."
 
   merge-para-main:
-    name: 🔀 Merge para Main
-    needs: realizar-deploy-em-producao
+    name: 🔀 Merge staging → main
+    needs: aprovar-produção
     runs-on: ubuntu-latest
     outputs:
       merged: ${{ steps.verifica_pr.outputs.merged }}
     steps:
-      - name: 📥 Checkout do repositório
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: ✍️ Criar Pull Request staging → main
+      - name: 📝 Criar PR staging → main
         id: criar_pr
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -74,7 +51,7 @@ jobs:
           PR_NUMBER=$(echo "$PR_URL" | grep -o '[0-9]*$')
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
 
-      - name: 🔄 Merge Pull Request
+      - name: 🔄 Merge PR
         id: verifica_pr
         if: env.PR_NUMBER != ''
         env:
@@ -83,33 +60,10 @@ jobs:
           gh pr merge $PR_NUMBER --merge --repo ${{ inputs.repository }}
           echo "merged=true" >> $GITHUB_OUTPUT
 
-  deploy-em-producao:
-    name: 🚢 Deploy em Produção
+  chamar-production:
+    name: 🚢 Deploy Produção (${{ inputs.repository }})
     needs: merge-para-main
-    runs-on: ubuntu-latest
     if: needs.merge-para-main.outputs.merged == 'true'
-    steps:
-      - name: 🔍 Verificando se existe workflow de produção
-        id: verifica_production
-        env:
-          REPO: ${{ inputs.repository }}
-          TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          echo "Checando workflow de produção remoto em $REPO..."
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token $TOKEN" \
-            https://api.github.com/repos/$REPO/contents/.github/workflows/production.yml)
-
-          if [ "$STATUS" != "200" ]; then
-            echo "Workflow de produção não encontrado. Pulando esta etapa."
-            echo "found=false" >> $GITHUB_OUTPUT
-          else
-            echo "Workflow encontrado."
-            echo "found=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 🚀 Executando workflow de produção
-        if: steps.verifica_production.outputs.found == 'true'
-        uses: felipe-domingues/app-staging/.github/workflows/production.yml@main
-        secrets:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    uses: ${{ inputs.repository }}/.github/workflows/production.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}

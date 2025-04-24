@@ -2,10 +2,9 @@ name: Deploy Staging → Produção 🚀
 
 on:
   workflow_call:
-    inputs:
+    secrets:
       GH_TOKEN:
         required: true
-        type: secret
 
 jobs:
   deploy-em-staging:
@@ -28,7 +27,7 @@ jobs:
         if: env.skip_staging != 'true'
         run: |
           echo "🔄 Chamando o workflow staging.yml no repositório ${{ github.repository }}..."
-          gh workflow run staging.yml --repo ${{ github.repository }} --ref main --workflow-run --token ${{ inputs.GH_TOKEN }}
+          gh workflow run staging.yml --repo ${{ github.repository }} --ref main --workflow-run --token ${{ secrets.GH_TOKEN }}
 
   realizar-deploy-em-producao:
     name: Realizar deploy em produção? ⚠️
@@ -52,7 +51,7 @@ jobs:
         if: env.skip_production != 'true'
         run: |
           echo "🔄 Chamando o workflow production.yml no repositório ${{ github.repository }}..."
-          gh workflow run production.yml --repo ${{ github.repository }} --ref main --workflow-run --token ${{ inputs.GH_TOKEN }}
+          gh workflow run production.yml --repo ${{ github.repository }} --ref main --workflow-run --token ${{ secrets.GH_TOKEN }}
 
   merge-para-main:
     name: Merge para Main 🔀
@@ -67,7 +66,7 @@ jobs:
       - name: Criar Pull Request staging → main
         id: criar_pr
         env:
-          GH_TOKEN: ${{ inputs.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           gh repo set-default ${{ github.repository }}
           TIMESTAMP=$(TZ=America/Sao_Paulo date +"%d/%m/%Y %H:%M:%S")
@@ -82,7 +81,7 @@ jobs:
         id: verifica_pr
         if: env.PR_NUMBER != ''
         env:
-          GH_TOKEN: ${{ inputs.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           gh pr merge $PR_NUMBER --merge --repo ${{ github.repository }}
           echo "merged=true" >> $GITHUB_OUTPUT

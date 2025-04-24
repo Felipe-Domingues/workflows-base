@@ -27,10 +27,12 @@ jobs:
             -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
             https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/staging.yml)
 
-          if [ "$STATUS" == "200" ]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
+          if [ "$STATUS" != "200" ]; then
+            echo "🚨 Não foi encontrado o workflow de staging no repositório ${{ inputs.repository }}. A etapa de staging será pulada."
             echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ O workflow de staging foi encontrado com sucesso no repositório ${{ inputs.repository }}."
+            echo "found=true" >> $GITHUB_OUTPUT
           fi
 
       - name: 🚀 Executando workflow de staging via gh CLI
@@ -65,10 +67,12 @@ jobs:
             -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
             https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/production.yml)
 
-          if [ "$STATUS" == "200" ]; then
-            echo "found=true" >> $GITHUB_OUTPUT
-          else
+          if [ "$STATUS" != "200" ]; then
+            echo "🚨 Não foi encontrado o workflow de produção no repositório ${{ inputs.repository }}. A etapa de produção será pulada."
             echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ O workflow de produção foi encontrado com sucesso no repositório ${{ inputs.repository }}."
+            echo "found=true" >> $GITHUB_OUTPUT
           fi
 
       - name: 🚀 Executando workflow de produção via gh CLI

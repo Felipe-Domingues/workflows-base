@@ -1,67 +1,47 @@
-name: 🚀 Deploy Staging → Produção
+name: Deploy Staging → Produção
 
 on:
-  workflow_call:
+  push:
+    branches:
+      - staging
 
 jobs:
-  validate-workflow-staging:
-    name: 🔍 Validando workflow de staging
+  deploy-em-staging:
+    name: Deploy em Staging
     runs-on: ubuntu-latest
-    outputs:
-      workflow_exists: ${{ steps.check_workflow_staging.outputs.exists }}
     steps:
-      - name: 📥 Verificando se o workflow staging.yml existe
-        id: check_workflow_staging
+      - name: Verificar se o workflow de staging existe
         run: |
           WORKFLOW_EXISTS=$(gh workflow list --repo felipe-domingues/workflows-base | grep "staging.yml" || true)
           if [ -z "$WORKFLOW_EXISTS" ]; then
             echo "❌ O workflow 'staging.yml' não foi encontrado. Pular para o próximo job."
-            echo "::set-output name=exists::false"
+            exit 1
           else
             echo "✅ Workflow 'staging.yml' encontrado."
-            echo "::set-output name=exists::true"
           fi
 
-  deploy-em-staging:
-    name: 🧪 Deploy em Staging
-    runs-on: ubuntu-latest
-    needs: validate-workflow-staging
-    if: needs.validate-workflow-staging.outputs.workflow_exists == 'true'
-    steps:
-      - name: ▶️ Executando workflow de staging no repositório ${{ github.repository }}
+      - name: Executar workflow de staging
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          echo -e "\033[1;34m🔁 Disparando workflow 'staging.yml' no repositório felipe-domingues/workflows-base...\033[0m"
-          gh workflow run staging.yml --repo felipe-domingues/workflows-base
+          gh workflow run felipe-domingues/workflows-base/.github/workflows/staging.yml@main
 
-  validate-workflow-production:
-    name: 🔍 Validando workflow de produção
+  deploy-em-producao:
+    name: Deploy em Produção
     runs-on: ubuntu-latest
-    outputs:
-      workflow_exists: ${{ steps.check_workflow_production.outputs.exists }}
     steps:
-      - name: 📥 Verificando se o workflow production.yml existe
-        id: check_workflow_production
+      - name: Verificar se o workflow de produção existe
         run: |
           WORKFLOW_EXISTS=$(gh workflow list --repo felipe-domingues/workflows-base | grep "production.yml" || true)
           if [ -z "$WORKFLOW_EXISTS" ]; then
-            echo "❌ O workflow 'production.yml' não foi encontrado. Pular para o próximo job."
-            echo "::set-output name=exists::false"
+            echo "❌ O workflow 'production.yml' não foi encontrado."
+            exit 1
           else
             echo "✅ Workflow 'production.yml' encontrado."
-            echo "::set-output name=exists::true"
           fi
 
-  deploy-em-producao:
-    name: 🚢 Deploy em Produção
-    runs-on: ubuntu-latest
-    needs: validate-workflow-production
-    if: needs.validate-workflow-production.outputs.workflow_exists == 'true'
-    steps:
-      - name: ▶️ Executando workflow de produção no repositório ${{ github.repository }}
+      - name: Executar workflow de produção
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          echo -e "\033[1;34m📦 Disparando workflow 'production.yml' no repositório felipe-domingues/workflows-base...\033[0m"
-          gh workflow run production.yml --repo felipe-domingues/workflows-base
+          gh workflow run felipe-domingues/workflows-base/.github/workflows/production.yml@main

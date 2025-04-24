@@ -5,7 +5,7 @@ on:
     inputs:
       repository:
         required: true
-        type: string
+        type: string  # Define o tipo como string para aceitar o nome do repositório
     secrets:
       GH_TOKEN:
         required: true

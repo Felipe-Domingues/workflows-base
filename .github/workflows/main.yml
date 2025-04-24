@@ -49,12 +49,16 @@ jobs:
       name: production
     steps:
       - name: 🛑 Aguardando aprovação manual
-        run: echo "Aguardando aprovação..."
+        id: approval
+        run: |
+          echo "Aguardando aprovação para o deploy em produção..."
+        # Aqui você deve usar o comando de `workflow_dispatch` para aguardar uma aprovação manual.
 
   deploy-em-producao:
     name: 🚢 Deploy em Produção
     needs: realizar-deploy-em-producao
     runs-on: ubuntu-latest
+    if: needs.realizar-deploy-em-producao.result == 'success'  # Certifique-se de que a aprovação foi dada
     steps:
       - name: 🔍 Verificando se existe workflow de produção no repositório ${{ inputs.repository }}
         id: verifica_production

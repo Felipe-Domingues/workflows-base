@@ -34,9 +34,6 @@ jobs:
       - name: 🚀 Executando workflow de staging em ${{ inputs.repository }}
         if: steps.verifica_staging.outputs.found == 'true'
         uses: ${{ inputs.repository }}/.github/workflows/staging.yml@main
-        with: {}
-        secrets:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   realizar-deploy-em-producao:
     name: 🧭 Realizar deploy em produção?
@@ -106,6 +103,3 @@ jobs:
       - name: 🚀 Executando workflow de produção em ${{ inputs.repository }}
         if: steps.verifica_production.outputs.found == 'true'
         uses: ${{ inputs.repository }}/.github/workflows/production.yml@main
-        with: {}
-        secrets:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}

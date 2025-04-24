@@ -65,7 +65,7 @@ jobs:
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/production.yml)
+            https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/productionA.yml)
 
           if [ "$STATUS" != "200" ]; then
             echo "🚨 Não foi encontrado o workflow de produção no repositório ${{ inputs.repository }}. A etapa de produção será pulada."

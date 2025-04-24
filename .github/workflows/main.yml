@@ -13,7 +13,7 @@ jobs:
       - name: 📥 Verificando se o workflow staging.yml existe
         id: check_workflow_staging
         run: |
-          WORKFLOW_EXISTS=$(gh workflow list --repo ${{ github.repository }} | grep "staging.yml" || true)
+          WORKFLOW_EXISTS=$(gh workflow list --repo felipe-domingues/workflows-base | grep "staging.yml" || true)
           if [ -z "$WORKFLOW_EXISTS" ]; then
             echo "❌ O workflow 'staging.yml' não foi encontrado. Pular para o próximo job."
             echo "::set-output name=exists::false"
@@ -32,8 +32,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          echo -e "\033[1;34m🔁 Disparando workflow 'staging.yml' no repositório ${{ github.repository }}...\033[0m"
-          gh workflow run staging.yml --repo ${{ github.repository }}
+          echo -e "\033[1;34m🔁 Disparando workflow 'staging.yml' no repositório felipe-domingues/workflows-base...\033[0m"
+          gh workflow run staging.yml --repo felipe-domingues/workflows-base
 
   validate-workflow-production:
     name: 🔍 Validando workflow de produção
@@ -44,7 +44,7 @@ jobs:
       - name: 📥 Verificando se o workflow production.yml existe
         id: check_workflow_production
         run: |
-          WORKFLOW_EXISTS=$(gh workflow list --repo ${{ github.repository }} | grep "production.yml" || true)
+          WORKFLOW_EXISTS=$(gh workflow list --repo felipe-domingues/workflows-base | grep "production.yml" || true)
           if [ -z "$WORKFLOW_EXISTS" ]; then
             echo "❌ O workflow 'production.yml' não foi encontrado. Pular para o próximo job."
             echo "::set-output name=exists::false"
@@ -63,50 +63,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          echo -e "\033[1;34m📦 Disparando workflow 'production.yml' no repositório ${{ github.repository }}...\033[0m"
-          gh workflow run production.yml --repo ${{ github.repository }}
-
-  realizar-deploy-em-producao:
-    name: ✅ Aprovação para Produção
-    needs: deploy-em-staging
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-    steps:
-      - name: ⏳ Aguardando aprovação manual
-        run: echo -e "\033[1;33m🔒 Aguardando aprovação manual para deploy em produção...\033[0m"
-
-  merge-para-main:
-    name: 🔀 Merge para Main
-    needs: realizar-deploy-em-producao
-    runs-on: ubuntu-latest
-    outputs:
-      merged: ${{ steps.verifica_pr.outputs.merged }}
-    steps:
-      - name: 📥 Checkout do repositório
-        uses: actions/checkout@v4
-
-      - name: 📝 Criar Pull Request staging → main
-        id: criar_pr
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          gh repo set-default ${{ github.repository }}
-          TIMESTAMP=$(TZ=America/Sao_Paulo date +"%d/%m/%Y %H:%M:%S")
-          PR_TITLE="🚀 Publicação $TIMESTAMP"
-          PR_BODY="🤖 Pull Request automático feito pelo workflow de deploy"
-          echo -e "\033[1;36m🔧 Criando Pull Request...\033[0m"
-          PR_URL=$(gh pr create --base main --head staging --title "$PR_TITLE" --body "$PR_BODY" || true)
-          echo "PR_URL=$PR_URL" >> $GITHUB_ENV
-          PR_NUMBER=$(echo "$PR_URL" | grep -o '[0-9]*$')
-          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
-
-      - name: ✅ Realizando merge do PR
-        id: verifica_pr
-        if: env.PR_NUMBER != ''
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          echo -e "\033[1;32m🔃 Fazendo merge do PR #$PR_NUMBER...\033[0m"
-          gh pr merge $PR_NUMBER --merge --repo ${{ github.repository }}
-          echo "merged=true" >> $GITHUB_OUTPUT
+          echo -e "\033[1;34m📦 Disparando workflow 'production.yml' no repositório felipe-domingues/workflows-base...\033[0m"
+          gh workflow run production.yml --repo felipe-domingues/workflows-base

@@ -54,6 +54,39 @@ jobs:
         run: |
           echo "Aguardando aprovação para o deploy em produção..."
 
+  merge-para-main:
+    name: 🔀 Merge para Main
+    needs: realizar-deploy-em-producao
+    runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.verifica_pr.outputs.merged }}
+    steps:
+      - name: 📥 Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: ✍️ Criar Pull Request staging → main
+        id: criar_pr
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh repo set-default ${{ inputs.repository }}
+          TIMESTAMP=$(TZ=America/Sao_Paulo date +"%d/%m/%Y %H:%M:%S")
+          PR_TITLE="Publicação $TIMESTAMP"
+          PR_BODY="Pull Request automático feito pelo workflow de deploy"
+          PR_URL=$(gh pr create --base main --head staging --title "$PR_TITLE" --body "$PR_BODY" || true)
+          echo "PR_URL=$PR_URL" >> $GITHUB_ENV
+          PR_NUMBER=$(echo "$PR_URL" | grep -o '[0-9]*$')
+          echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+
+      - name: 🔄 Merge Pull Request
+        id: verifica_pr
+        if: env.PR_NUMBER != ''
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr merge $PR_NUMBER --merge --repo ${{ inputs.repository }}
+          echo "merged=true" >> $GITHUB_OUTPUT
+
   deploy-em-producao:
     name: 🚢 Deploy em Produção
     needs: realizar-deploy-em-producao

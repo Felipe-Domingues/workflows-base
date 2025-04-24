@@ -12,16 +12,19 @@ on:
 
 jobs:
   deploy-em-staging:
-    name: 📦 Deploy em Staging
+    name: 📆 Deploy em Staging
     runs-on: ubuntu-latest
     steps:
       - name: 🔍 Verificando se existe workflow de staging em ${{ inputs.repository }}
         id: verifica_staging
+        env:
+          REPO: ${{ inputs.repository }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           echo "Checando workflow de staging remoto..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/staging.yml)
+            -H "Authorization: token $GH_TOKEN" \
+            https://api.github.com/repos/$REPO/contents/.github/workflows/staging.yml)
 
           if [ "$STATUS" != "200" ]; then
             echo "Workflow de staging não encontrado. Pulando esta etapa."
@@ -38,13 +41,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   realizar-deploy-em-producao:
-    name: 🧭 Realizar deploy em produção?
+    name: 🧫 Realizar deploy em produção?
     needs: deploy-em-staging
     runs-on: ubuntu-latest
     environment:
       name: production
     steps:
-      - name: 🛑 Aguardando aprovação manual para produção
+      - name: 🚩 Aguardando aprovação manual para produção
         run: echo "Aguardando aprovação..."
 
   merge-para-main:
@@ -54,15 +57,16 @@ jobs:
     outputs:
       merged: ${{ steps.verifica_pr.outputs.merged }}
     steps:
-      - name: 📥 Checkout do repositório
+      - name: 📅 Checkout do repositório
         uses: actions/checkout@v4
 
       - name: ✍️ Criar Pull Request staging → main
         id: criar_pr
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          REPO: ${{ inputs.repository }}
         run: |
-          gh repo set-default ${{ inputs.repository }}
+          gh repo set-default $REPO
           TIMESTAMP=$(TZ=America/Sao_Paulo date +"%d/%m/%Y %H:%M:%S")
           PR_TITLE="Publicação $TIMESTAMP"
           PR_BODY="Pull Request automático feito pelo workflow de deploy"
@@ -76,8 +80,9 @@ jobs:
         if: env.PR_NUMBER != ''
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          REPO: ${{ inputs.repository }}
         run: |
-          gh pr merge $PR_NUMBER --merge --repo ${{ inputs.repository }}
+          gh pr merge $PR_NUMBER --merge --repo $REPO
           echo "merged=true" >> $GITHUB_OUTPUT
 
   deploy-em-producao:
@@ -88,11 +93,14 @@ jobs:
     steps:
       - name: 🔍 Verificando se existe workflow de produção em ${{ inputs.repository }}
         id: verifica_production
+        env:
+          REPO: ${{ inputs.repository }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           echo "Checando workflow de produção remoto..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/production.yml)
+            -H "Authorization: token $GH_TOKEN" \
+            https://api.github.com/repos/$REPO/contents/.github/workflows/production.yml)
 
           if [ "$STATUS" != "200" ]; then
             echo "Workflow de produção não encontrado. Pulando esta etapa."

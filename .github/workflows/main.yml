@@ -25,7 +25,7 @@ jobs:
 
       - name: 🚀 Chamando staging.yml de ${{ inputs.repository }}
         if: success() && !contains(steps.check_staging.outputs.result, 'not-found')
-        uses: ${{ inputs.repository }}@main
+        uses: ${{ inputs.repository }}
         with:
           workflow: .github/workflows/staging.yml
           ref: main
@@ -91,7 +91,7 @@ jobs:
 
       - name: 🚀 Chamando production.yml de ${{ inputs.repository }}
         if: success() && !contains(steps.check_production.outputs.result, 'not-found')
-        uses: ${{ inputs.repository }}@main
+        uses: ${{ inputs.repository }}
         with:
           workflow: .github/workflows/production.yml
           ref: main

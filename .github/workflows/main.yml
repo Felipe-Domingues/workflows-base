@@ -1,4 +1,4 @@
-name: Deploy Staging → Produção
+name: Deploy Staging → Produção 🚀
 
 on:
   push:
@@ -7,27 +7,39 @@ on:
 
 jobs:
   deploy-em-staging:
-    name: Deploy em Staging
+    name: Deploy em Staging 🟢
     runs-on: ubuntu-latest
     steps:
-      - name: Realizando Deploy em Staging
+      - name: Verificar se o workflow de deploy-staging.yml existe no repositório ${{ github.repository }}
+        id: check_staging
         run: |
-          echo "Realizando deploy em staging..."
-          sleep 1
-          echo "Deploy em staging concluído com sucesso."
+          echo "🔍 Verificando se o workflow staging.yml existe no repositório ${{ github.repository }}..."
+          if ! gh api repos/${{ github.repository }}/contents/.github/workflows/staging.yml > /dev/null 2>&1; then
+            echo "❌ Erro: O workflow staging.yml não foi encontrado no repositório ${{ github.repository }}."
+            echo "skip_step=true" >> $GITHUB_ENV
+          else
+            echo "✅ Workflow staging.yml encontrado. Prosseguindo com a execução."
+            echo "skip_step=false" >> $GITHUB_ENV
+          fi
+
+      - name: Chamar o workflow de deploy-staging.yml no repositório ${{ github.repository }}
+        if: env.skip_step != 'true'
+        run: |
+          echo "🔄 Chamando o workflow staging.yml no repositório ${{ github.repository }}..."
+          gh workflow run staging.yml --repo ${{ github.repository }}
 
   realizar-deploy-em-producao:
-    name: Realizar deploy em produção?
+    name: Realizar deploy em produção? ⚠️
     needs: deploy-em-staging
     runs-on: ubuntu-latest
     environment:
       name: production
     steps:
-      - name: Aguardando aprovação manual para produção
+      - name: Aguardando aprovação manual para produção 👨‍💻
         run: echo "Aguardando aprovação..."
 
   merge-para-main:
-    name: Merge para Main
+    name: Merge para Main 🔀
     needs: realizar-deploy-em-producao
     runs-on: ubuntu-latest
     outputs:
@@ -60,13 +72,24 @@ jobs:
           echo "merged=true" >> $GITHUB_OUTPUT
 
   deploy-em-producao:
-    name: Deploy em Produção
+    name: Deploy em Produção 🔴
     needs: merge-para-main
     runs-on: ubuntu-latest
     if: needs.merge-para-main.outputs.merged == 'true'
     steps:
-      - name: Rodando testes em produção
+      - name: Verificar se o workflow de deploy-production.yml existe no repositório ${{ github.repository }}
+        id: check_production
         run: |
-          echo "Iniciando verificação pós-merge na main..."
-          sleep 1
-          echo "Testes em produção concluídos com sucesso."
+          echo "🔍 Verificando se o workflow production.yml existe no repositório ${{ github.repository }}..."
+          if ! gh api repos/${{ github.repository }}/contents/.github/workflows/production.yml > /dev/null 2>&1; then
+            echo "❌ Erro: O workflow production.yml não foi encontrado no repositório ${{ github.repository }}."
+            echo "skip_step=true" >> $GITHUB_ENV
+          else
+            echo "✅ Workflow production.yml encontrado. Prosseguindo com a execução."
+            echo "skip_step=false" >> $GITHUB_ENV
+
+      - name: Chamar o workflow de deploy-production.yml no repositório ${{ github.repository }}
+        if: env.skip_step != 'true'
+        run: |
+          echo "🔄 Chamando o workflow production.yml no repositório ${{ github.repository }}..."
+          gh workflow run production.yml --repo ${{ github.repository }}

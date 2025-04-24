@@ -1,4 +1,4 @@
-name: 🚀 Deploy Staging → Produção
+name: Deploy Staging → Produção
 
 on:
   workflow_call:
@@ -11,25 +11,40 @@ on:
         required: true
 
 jobs:
-  chamar-staging:
-    name: 📦 Deploy Staging (${{ inputs.repository }})
-    uses: ${{ inputs.repository }}/.github/workflows/staging.yml@main
-    secrets:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  deploy-em-staging:
+    name: 🔧 Deploy em Staging - ${{ inputs.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔍 Verificando se workflow de staging existe em ${{ inputs.repository }}
+        id: check_staging
+        run: |
+          echo "Checando existência do workflow de staging..."
+          gh workflow view staging.yml --repo "${{ inputs.repository }}" || echo "not-found" >> result.txt
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-  aprovar-produção:
-    name: ✅ Aprovação para Produção
-    needs: chamar-staging
+      - name: 🚀 Chamando staging.yml de ${{ inputs.repository }}
+        if: success() && !contains(steps.check_staging.outputs.result, 'not-found')
+        uses: ${{ inputs.repository }}@main
+        with:
+          workflow: .github/workflows/staging.yml
+          ref: main
+        secrets:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  realizar-deploy-em-producao:
+    name: 🧑‍💻 Aguardar aprovação para produção
+    needs: deploy-em-staging
     runs-on: ubuntu-latest
     environment:
       name: production
     steps:
       - name: 🛑 Aguardando aprovação manual
-        run: echo "Aguardando aprovação para produção..."
+        run: echo "Aguardando aprovação..."
 
   merge-para-main:
     name: 🔀 Merge staging → main
-    needs: aprovar-produção
+    needs: realizar-deploy-em-producao
     runs-on: ubuntu-latest
     outputs:
       merged: ${{ steps.verifica_pr.outputs.merged }}
@@ -51,19 +66,34 @@ jobs:
           PR_NUMBER=$(echo "$PR_URL" | grep -o '[0-9]*$')
           echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
 
-      - name: 🔄 Merge PR
+      - name: ✅ Merge PR
         id: verifica_pr
         if: env.PR_NUMBER != ''
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh pr merge $PR_NUMBER --merge --repo ${{ inputs.repository }}
+          gh pr merge "$PR_NUMBER" --merge --repo ${{ inputs.repository }}
           echo "merged=true" >> $GITHUB_OUTPUT
 
-  chamar-production:
-    name: 🚢 Deploy Produção (${{ inputs.repository }})
+  deploy-em-producao:
+    name: 🚀 Deploy em Produção - ${{ inputs.repository }}
     needs: merge-para-main
     if: needs.merge-para-main.outputs.merged == 'true'
-    uses: ${{ inputs.repository }}/.github/workflows/production.yml@main
-    secrets:
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔍 Verificando se workflow de produção existe em ${{ inputs.repository }}
+        id: check_production
+        run: |
+          echo "Checando existência do workflow de produção..."
+          gh workflow view production.yml --repo "${{ inputs.repository }}" || echo "not-found" >> result.txt
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: 🚀 Chamando production.yml de ${{ inputs.repository }}
+        if: success() && !contains(steps.check_production.outputs.result, 'not-found')
+        uses: ${{ inputs.repository }}@main
+        with:
+          workflow: .github/workflows/production.yml
+          ref: main
+        secrets:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}

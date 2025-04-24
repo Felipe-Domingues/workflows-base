@@ -2,6 +2,10 @@ name: 🚀 Deploy Staging → Produção
 
 on:
   workflow_call:
+    inputs:
+      repository:
+        required: true
+        type: string
     secrets:
       GH_TOKEN:
         required: true
@@ -11,13 +15,13 @@ jobs:
     name: 📦 Deploy em Staging
     runs-on: ubuntu-latest
     steps:
-      - name: 🔍 Verificando se existe workflow de staging em {{ github.repository }}
+      - name: 🔍 Verificando se existe workflow de staging em ${{ inputs.repository }}
         id: verifica_staging
         run: |
           echo "Checando workflow de staging remoto..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/contents/.github/workflows/staging.yml)
+            https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/staging.yml)
 
           if [ "$STATUS" != "200" ]; then
             echo "Workflow de staging não encontrado. Pulando esta etapa."
@@ -27,9 +31,9 @@ jobs:
             echo "found=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: 🚀 Executando workflow de staging em {{ github.repository }}
+      - name: 🚀 Executando workflow de staging em ${{ inputs.repository }}
         if: steps.verifica_staging.outputs.found == 'true'
-        uses: ${{ github.repository }}/.github/workflows/staging.yml@main
+        uses: ${{ inputs.repository }}/.github/workflows/staging.yml@main
         secrets:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
@@ -58,7 +62,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh repo set-default ${{ github.repository }}
+          gh repo set-default ${{ inputs.repository }}
           TIMESTAMP=$(TZ=America/Sao_Paulo date +"%d/%m/%Y %H:%M:%S")
           PR_TITLE="Publicação $TIMESTAMP"
           PR_BODY="Pull Request automático feito pelo workflow de deploy"
@@ -73,7 +77,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          gh pr merge $PR_NUMBER --merge --repo ${{ github.repository }}
+          gh pr merge $PR_NUMBER --merge --repo ${{ inputs.repository }}
           echo "merged=true" >> $GITHUB_OUTPUT
 
   deploy-em-producao:
@@ -82,13 +86,13 @@ jobs:
     runs-on: ubuntu-latest
     if: needs.merge-para-main.outputs.merged == 'true'
     steps:
-      - name: 🔍 Verificando se existe workflow de produção em {{ github.repository }}
+      - name: 🔍 Verificando se existe workflow de produção em ${{ inputs.repository }}
         id: verifica_production
         run: |
           echo "Checando workflow de produção remoto..."
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            https://api.github.com/repos/${{ github.repository }}/contents/.github/workflows/production.yml)
+            https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/production.yml)
 
           if [ "$STATUS" != "200" ]; then
             echo "Workflow de produção não encontrado. Pulando esta etapa."
@@ -98,8 +102,8 @@ jobs:
             echo "found=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: 🚀 Executando workflow de produção em {{ github.repository }}
+      - name: 🚀 Executando workflow de produção em ${{ inputs.repository }}
         if: steps.verifica_production.outputs.found == 'true'
-        uses: ${{ github.repository }}/.github/workflows/production.yml@main
+        uses: ${{ inputs.repository }}/.github/workflows/production.yml@main
         secrets:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

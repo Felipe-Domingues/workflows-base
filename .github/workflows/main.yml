@@ -25,7 +25,7 @@ jobs:
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
-            https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/staging.yml)
+            https://api.github.com/repos/${{ inputs.repository }}/contents/.github/workflows/stagingA.yml)
 
           if [ "$STATUS" != "200" ]; then
             echo "🚨 Não foi encontrado o workflow de staging no repositório ${{ inputs.repository }}. A etapa de staging será pulada."

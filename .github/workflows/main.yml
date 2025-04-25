@@ -89,7 +89,7 @@ jobs:
 
   deploy-em-producao:
     name: 🚢 Deploy em Produção
-    needs: realizar-deploy-em-producao
+    needs: merge-para-main
     runs-on: ubuntu-latest
     if: needs.realizar-deploy-em-producao.result == 'success'  # Certifique-se de que a aprovação foi dada
     steps:
